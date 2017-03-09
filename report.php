@@ -60,20 +60,22 @@ add_action( 'plugins_loaded', 'clicktrack_update_db_check' );
 
     function oopmvc_report_cb() {
 
-    		$fromdate = date('Y-m-d', strtotime( '-7 days' ) );
+    		$fromdate = date('Y-m-d', strtotime( '-30 days' ) );
     		$todate   = date('Y-m-d', strtotime( '+1 days' ));
+    		$externalurloption = '';
     		$reportaction   = 'generatereport';
 
     	    if(isset($_POST['fromdate']) && isset($_POST['todate'])){
-                $fromdate 			= $_POST['fromdate'];
-    			$todate   			= $_POST['todate'];   
-    			$reportaction   	= $_POST['reportaction'];  
+                $fromdate 			= isset($_POST['fromdate']) ? $_POST['fromdate'] : $fromdate;
+    			$todate   			= isset($_POST['todate']) ? $_POST['todate'] : $todate;   
+    			$reportaction   	= isset($_POST['reportaction']) ? $_POST['reportaction'] : 'generatereport';  
+    			$externalurloption  = isset($_POST['externalurloption']) ? $_POST['externalurloption'] : '';  
 
     	    }
 
 
     	    if( $reportaction == 'generatereport'){ 
-	    			$report_results = oopmvc_generate_report($fromdate, $todate, $reportaction);  
+	    			$report_results = oopmvc_generate_report($fromdate, $todate, $reportaction, $externalurloption);  
 	        }
 
 
@@ -84,15 +86,35 @@ add_action( 'plugins_loaded', 'clicktrack_update_db_check' );
 			    From Date:
 			    <input type="text" id="fromdate" name="fromdate" value="<?php echo $fromdate;?>"/>
 			    To Date: <input type="text" id="todate" name="todate" value="<?php echo $todate;?>"/>
+
 			    <select name="reportaction">
 			    	<option value="generatereport" <?php echo $reportaction == 'generatereport' ? 'selected' : '';?>> Make Report </option> 
 			    	<option value="downloadreport" <?php echo $reportaction == 'downloadreport' ? 'selected' : '';?>> Download CSV Report </option> 
 			    </select>
-			    <input type="submit" value="Submit" name="submit"> 
 
-			</form>
+                &nbsp;&nbsp;Report for External Page :  <select name="externalurloption" style="max-width:300px;">
+			    	<option value="" > All External Link </option> 
+
+                <?php  
+				global $wpdb;
+				$table_name = $wpdb->prefix.'clicktrack_report';
+
+ 	 			$externalurls  = $wpdb->get_results("SELECT externalurl FROM ".$table_name." group by externalurl order by externalurl ASC;");
+                foreach($externalurls as $row){ 
+
+								   	?>
+			   
+			    	<option value="<?php echo $row->externalurl;?>" <?php echo $row->externalurl == $externalurloption ? 'selected' : '';?>>  <?php echo $row->externalurl;?> </option> 
+			    <?php } ?>
+
+			    </select>
+			    <input type="submit" value="Submit" name="submit" style="border: solid 1px #ffffff;border-radius: 9px;moz-border-radius: 3px;font-size: 20px;line-height: 32px;color: #ffffff;padding: 1px 17px 3px;background-color: #0a82c7;"> 
+
+			</form> <br /> <hr > <br />
  
 			<div id="reportresults"><?php 
+
+			if($externalurloption != '' && $reportaction == 'generatereport') echo '<h3> Report For Page : '. $externalurloption. '</h3> '; 
 
 			if( $reportaction == 'generatereport'){  
 					echo $report_results; 
@@ -103,7 +125,7 @@ add_action( 'plugins_loaded', 'clicktrack_update_db_check' );
                  	    jQuery.ajax({ 
                  	   		method: "POST",
 							url: '<?php echo admin_url( 'admin-ajax.php' );?>',
-							data: {action: 'downloadreportcsv', fromdate: '<?php echo $fromdate;?>', todate: '<?php echo $todate;?>', reportaction : 'downloadreport'}
+							data: {action: 'downloadreportcsv', fromdate: '<?php echo $fromdate;?>', todate: '<?php echo $todate;?>', reportaction : 'downloadreport', externalurloption: '<?php echo $externalurloption;?>'}
 						})
 						.done(function( response ) {
 								var uri = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(response);
@@ -150,11 +172,12 @@ function prefix_downloadreportcsv() {
 	$fromdate 			= isset($_POST['fromdate'] ) 		? $_POST['fromdate'] : date('Y-m-d', strtotime( '-7 days' ) );
 	$todate   			= isset($_POST['todate'] ) 			? $_POST['todate'] : date('Y-m-d');   
 	$reportaction   	= isset($_POST['reportaction'] ) 	? $_POST['reportaction'] : 'downloadreport'; 
+	$externalurloption   	= isset($_POST['externalurloption'] ) 	? $_POST['externalurloption'] : ''; 
 
 
 
     if( $reportaction == 'downloadreport'){ 
-	    			$report_results = oopmvc_generate_report($fromdate, $todate, $reportaction);  
+	    			$report_results = oopmvc_generate_report($fromdate, $todate, $reportaction, $externalurloption);  
 	    			echo $report_results;
  	}
 
@@ -178,25 +201,35 @@ function enqueue_date_picker(){
  
 
 
-function oopmvc_generate_report($fromdate, $todate , $reportaction =  'generatereport'){
+function oopmvc_generate_report($fromdate, $todate , $reportaction =  'generatereport', $externalurloption = ''){
 				
 				global $wpdb;
 				$table_name = $wpdb->prefix.'clicktrack_report';
 
- 	 			$reports  = $wpdb->get_results("SELECT  postname, posturl, externalurl, count(id) as count_total   FROM ".$table_name." WHERE `time` between '".$fromdate."' and '".$todate."'  group by externalurl, postname order by time DESC;");
+				if($externalurloption  != ''){
+					$reports  = $wpdb->get_results("SELECT  postname, posturl, externalurl, count(id) as count_total   FROM ".$table_name." WHERE `time` between '".$fromdate."' and '".$todate."' and  externalurl = '".$externalurloption."' group by postname order by time DESC;");
+				}else{ 
+					$reports  = $wpdb->get_results("SELECT  postname, posturl, externalurl, count(id) as count_total   FROM ".$table_name." WHERE `time` between '".$fromdate."' and '".$todate."'  group by externalurl, postname order by time DESC;");
+				}
 
-				$report_results = ($reportaction == 'generatereport') ? '<table class="widefat fixed striped" cellspacing="0">
+
+				$report_results = '';
+				if($reportaction == 'generatereport'){
+					$report_results .=  '<table class="widefat fixed striped" cellspacing="0">
 					    <thead>
 					    <tr>
 					            <th id="posttitlecol" class="manage-column column-post-title" scope="col">Post Title</th>
-					            <th id="urlcol" class="manage-column column-url" scope="col"> Internal URL </th>  
-					            <th id="externalurlcol" class="manage-column column-external" scope="col"> External URL </th>  
-					            <th id="click-count-col" class="manage-column column-click-count" scope="col" style="text-align:center;"> 	Click Count </th> 
+					            <th id="urlcol" class="manage-column column-url" scope="col"> Post URL </th>';
+					 if($externalurloption == '')   $report_results .=  '<th id="externalurlcol" class="manage-column column-external" scope="col"> External URL </th>  ';
+					 $report_results .=  '<th id="click-count-col" class="manage-column column-click-count" scope="col" style="text-align:center;"> 	Click Count </th> 
 
 					    </tr>
 					    </thead> 
 
-					    <tbody id="the-list">' : "post_title, posturl , externalurl, click_count\n";
+					    <tbody id="the-list">';
+					}else{ $report_results .=   "post_title, posturl , externalurl, click_count\n"; }
+
+
 
 					    $i=0;
  
@@ -215,9 +248,10 @@ function oopmvc_generate_report($fromdate, $todate , $reportaction =  'generater
 
 								        		$report_results .= '<tr class="'.$trclass.'">
 					            						            <td class="column-columnname"><a href='.$posturl.' target="_blank">'. $posttitle.  '</a></td>
-					            									<td class="column-columnname">'. $posturl . '</td>
-					            									<td class="column-columnname">'. $externalurl . '</td>
-					            									<td class="column-columnname" style="text-align:center;">'. $clickcount .'</td></tr>'; 
+					            									<td class="column-columnname">'. $posturl . '</td>';
+					            			     if($externalurloption == '') 
+					            			     	$report_results .= ' <td class="column-columnname">'. $externalurl . '</td>';
+					            			        $report_results .= '<td class="column-columnname" style="text-align:center;">'. $clickcount .'</td></tr>';  
 								    	}else{
 					                         $report_results .=  $posttitle.",".$posturl.",".$externalurl.",".$clickcount."\n" ;
 								    	}

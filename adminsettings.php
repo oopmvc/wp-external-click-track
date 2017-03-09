@@ -66,10 +66,14 @@ function oopmvcwp_options_page_html()
   
        settings_errors(); 
  ?>
-    	<div class="wrap">
+  <div class="wrap">
 		<div class="icon32" id="icon-options-general"><br></div>
-		<h2 style="border-bottom: 2px solid #666;">Click Track - Settings</h2> 
+ <h2 style="border-bottom: 2px solid #666;"> Click Track - Settings </h2> 
 
+ <hr /> <a href="<?php echo admin_url('admin.php?page=reportpage');?>" class="button-primary"  > Report Page </a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="javascript:void(0)" onclick="jQuery('#settingsdiv').toggle()" class="button-primary"  > Show/Hide Settings </a>  <hr />
+
+
+ <div id="settingsdiv" style="display:none;"> 
 		<form action="options.php" method="post">
 	    <?php
 				if ( function_exists('wp_nonce_field') ) 
@@ -82,6 +86,9 @@ function oopmvcwp_options_page_html()
 		</p>
 		</form>
 	</div>
+
+</div>
+
 
 
     <?php
