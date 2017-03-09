@@ -1,6 +1,6 @@
 // initialisation
 jQuery(document).ready(function($) {
-	   editAreaLoader.init({
+	   /*editAreaLoader.init({
 			id: "acf-field-vue_custom_html"	// id of the textarea to transform		
 			,start_highlight: true
 			,allow_toggle: true
@@ -19,7 +19,7 @@ jQuery(document).ready(function($) {
 			,word_wrap: true
 			,language: "en"
 			,syntax: "js"	
-		});
+		});*/
 
 
 });

@@ -11,16 +11,19 @@ function clicktrackSave_cb(){
       $externalurl 		= isset($_POST['externalurl']) ? $_POST['externalurl'] : '';
       $user_id  		= get_current_user_id();
 
-      $wpdb->insert($table_name, array(
-                                'time' 			=> date('Y-m-d h:i:s'),   
-                                'postname' 		=> $postname,
-                                'postid' 		=> $postid,
-                                'posturl' 		=> $posturl,
-                                'externalurl' 	=> $externalurl,
-                                'userid' 	=> $user_id
-                                )  
-        );
-      echo 'Click Record Has been Recoded';
+      if(strlen($externalurl) > 3){ 
+
+          $wpdb->insert($table_name, array(
+                                    'time' 			=> date('Y-m-d h:i:s'),   
+                                    'postname' 		=> $postname,
+                                    'postid' 		=> $postid,
+                                    'posturl' 		=> $posturl,
+                                    'externalurl' 	=> $externalurl,
+                                    'userid' 	=> $user_id
+                                    )  
+            );
+        }
+        echo 'Click Record Has been Recoded';
         
   wp_die();
 }

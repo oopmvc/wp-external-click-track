@@ -10,11 +10,11 @@ function report_table_install(){
 	global $ClickTrack_db_version;
 
 
-	$installed_version = get_option('ClickTrack_db_version');
+	$installed_version 	= get_option('ClickTrack_db_version');
 
-	$table_name = $wpdb->prefix.'clicktrack_report';
+	$table_name 		= $wpdb->prefix.'clicktrack_report';
 
-	$charset_collate = $wpdb->get_charset_collate();
+	$charset_collate 	= $wpdb->get_charset_collate();
 
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
  
@@ -92,19 +92,20 @@ add_action( 'plugins_loaded', 'clicktrack_update_db_check' );
 			    	<option value="downloadreport" <?php echo $reportaction == 'downloadreport' ? 'selected' : '';?>> Download CSV Report </option> 
 			    </select>
 
-                &nbsp;&nbsp;Report for External Page :  <select name="externalurloption" style="max-width:300px;">
+                	&nbsp;&nbsp;Report for External Page :  <select name="externalurloption" style="max-width:300px;">
 			    	<option value="" > All External Link </option> 
 
                 <?php  
 				global $wpdb;
 				$table_name = $wpdb->prefix.'clicktrack_report';
 
- 	 			$externalurls  = $wpdb->get_results("SELECT externalurl FROM ".$table_name." group by externalurl order by externalurl ASC;");
+ 	 			$externalurls  = $wpdb->get_results('SELECT DISTINCT SUBSTRING_INDEX(REPLACE( REPLACE(REPLACE( externalurl, "https://", ""), "http://", ""), "www.", "")  , "/", 1) as externalurl FROM ' .$table_name.' where LENGTH(externalurl)>3 group by externalurl order by externalurl ASC;');
                 foreach($externalurls as $row){ 
+                                $externalurl =  $row->externalurl;
 
 								   	?>
 			   
-			    	<option value="<?php echo $row->externalurl;?>" <?php echo $row->externalurl == $externalurloption ? 'selected' : '';?>>  <?php echo $row->externalurl;?> </option> 
+			    	<option value="<?php echo $externalurl;?>" <?php echo $externalurl == $externalurloption ? 'selected' : '';?>>http://<?php echo $externalurl; ?> </option> 
 			    <?php } ?>
 
 			    </select>
@@ -169,9 +170,9 @@ add_action( 'wp_ajax_nopriv_downloadreportcsv', 'prefix_downloadreportcsv' );
 function prefix_downloadreportcsv() {
      
  
-	$fromdate 			= isset($_POST['fromdate'] ) 		? $_POST['fromdate'] : date('Y-m-d', strtotime( '-7 days' ) );
-	$todate   			= isset($_POST['todate'] ) 			? $_POST['todate'] : date('Y-m-d');   
-	$reportaction   	= isset($_POST['reportaction'] ) 	? $_POST['reportaction'] : 'downloadreport'; 
+	$fromdate 				= isset($_POST['fromdate'] ) 			? $_POST['fromdate'] : date('Y-m-d', strtotime( '-7 days' ) );
+	$todate   				= isset($_POST['todate'] ) 				? $_POST['todate'] : date('Y-m-d');   
+	$reportaction   		= isset($_POST['reportaction'] ) 		? $_POST['reportaction'] : 'downloadreport'; 
 	$externalurloption   	= isset($_POST['externalurloption'] ) 	? $_POST['externalurloption'] : ''; 
 
 
@@ -207,7 +208,7 @@ function oopmvc_generate_report($fromdate, $todate , $reportaction =  'generater
 				$table_name = $wpdb->prefix.'clicktrack_report';
 
 				if($externalurloption  != ''){
-					$reports  = $wpdb->get_results("SELECT  postname, posturl, externalurl, count(id) as count_total   FROM ".$table_name." WHERE `time` between '".$fromdate."' and '".$todate."' and  externalurl = '".$externalurloption."' group by postname order by time DESC;");
+					$reports  = $wpdb->get_results("SELECT  postname, posturl, externalurl, count(id) as count_total   FROM ".$table_name." WHERE `time` between '".$fromdate."' and '".$todate."' and  externalurl LIKE '%".$externalurloption."%' group by postname order by time DESC;");
 				}else{ 
 					$reports  = $wpdb->get_results("SELECT  postname, posturl, externalurl, count(id) as count_total   FROM ".$table_name." WHERE `time` between '".$fromdate."' and '".$todate."'  group by externalurl, postname order by time DESC;");
 				}
@@ -220,7 +221,8 @@ function oopmvc_generate_report($fromdate, $todate , $reportaction =  'generater
 					    <tr>
 					            <th id="posttitlecol" class="manage-column column-post-title" scope="col">Post Title</th>
 					            <th id="urlcol" class="manage-column column-url" scope="col"> Post URL </th>';
-					 if($externalurloption == '')   $report_results .=  '<th id="externalurlcol" class="manage-column column-external" scope="col"> External URL </th>  ';
+					 //if($externalurloption == '')   $report_results .=  '<th id="externalurlcol" class="manage-column column-external" scope="col"> External URL </th>  ';
+					 $report_results .=  '<th id="externalurlcol" class="manage-column column-external" scope="col"> External URL </th>  ';
 					 $report_results .=  '<th id="click-count-col" class="manage-column column-click-count" scope="col" style="text-align:center;"> 	Click Count </th> 
 
 					    </tr>
@@ -249,11 +251,11 @@ function oopmvc_generate_report($fromdate, $todate , $reportaction =  'generater
 								        		$report_results .= '<tr class="'.$trclass.'">
 					            						            <td class="column-columnname"><a href='.$posturl.' target="_blank">'. $posttitle.  '</a></td>
 					            									<td class="column-columnname">'. $posturl . '</td>';
-					            			     if($externalurloption == '') 
+					            			        //if($externalurloption == '')  	$report_results .= ' <td class="column-columnname">'. $externalurl . '</td>';
 					            			     	$report_results .= ' <td class="column-columnname">'. $externalurl . '</td>';
 					            			        $report_results .= '<td class="column-columnname" style="text-align:center;">'. $clickcount .'</td></tr>';  
 								    	}else{
-					                         $report_results .=  $posttitle.",".$posturl.",".$externalurl.",".$clickcount."\n" ;
+					                         $report_results .=  str_replace(",", "&#44;", $posttitle).",".$posturl.",".$externalurl.",".$clickcount."\n" ;
 								    	}
 
 								    }
